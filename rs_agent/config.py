@@ -175,6 +175,8 @@ def validate_settings(settings: Settings) -> list[str]:
         problems.append("LINKEDIN_API_VERSION must be YYYYMM")
     if settings.linkedin_configured and not settings.token_encryption_key:
         problems.append("TOKEN_ENCRYPTION_KEY is required when LinkedIn OAuth is configured")
+    if settings.is_production and settings.database_url.startswith("sqlite"):
+        problems.append("DATABASE_URL must be PostgreSQL in production (hosted filesystems are ephemeral; SQLite data would be lost)")
     if settings.is_production and settings.public_base_url.startswith("http://"):
         problems.append("PUBLIC_BASE_URL must use https in production")
     if settings.linkedin_redirect_uri and settings.is_production and not settings.linkedin_redirect_uri.startswith("https://"):

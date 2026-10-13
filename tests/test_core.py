@@ -30,6 +30,11 @@ class ConfigTests(unittest.TestCase):
         s = make_settings(APP_ENV="production", PUBLIC_BASE_URL="http://x.example")
         self.assertTrue(any("https" in p for p in validate_settings(s)))
 
+    def test_regression_production_rejects_sqlite(self):
+        # Render free web services have an ephemeral filesystem: a SQLite file would be wiped on spin-down.
+        s = make_settings(APP_ENV="production", DATABASE_URL="sqlite:///./rs_agent.db")
+        self.assertTrue(any("PostgreSQL" in p for p in validate_settings(s)))
+
     def test_bad_version_rejected(self):
         self.assertTrue(any("YYYYMM" in p for p in validate_settings(make_settings(LINKEDIN_API_VERSION="v2"))))
 
