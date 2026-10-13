@@ -1,0 +1,52 @@
+# Render Blueprint: web + worker + PostgreSQL. Secrets are set in the Render dashboard (sync: false).
+databases:
+  - name: rs-agent-db
+    plan: basic-256mb
+    postgresMajorVersion: "16"
+
+services:
+  - type: web
+    name: rs-agent-web
+    runtime: docker
+    plan: starter
+    healthCheckPath: /ready
+    autoDeploy: false            # deploy manually after CI passes
+    envVars: &env
+      - key: APP_ENV
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: rs-agent-db
+          property: connectionString
+      - key: PUBLIC_BASE_URL
+        sync: false
+      - key: ADMIN_TOKEN
+        sync: false
+      - key: SESSION_SECRET
+        sync: false
+      - key: TOKEN_ENCRYPTION_KEY
+        sync: false
+      - key: LINKEDIN_CLIENT_ID
+        sync: false
+      - key: LINKEDIN_CLIENT_SECRET
+        sync: false
+      - key: LINKEDIN_REDIRECT_URI
+        sync: false
+      - key: LINKEDIN_API_VERSION
+        value: "202605"
+      - key: LINKEDIN_AUTO_PUBLISH
+        value: "false"
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: DAILY_BUDGET_USD
+        value: "2.00"
+      - key: MONTHLY_BUDGET_USD
+        value: "40.00"
+
+  - type: worker
+    name: rs-agent-worker
+    runtime: docker
+    plan: starter
+    dockerCommand: python -m rs_agent.worker
+    autoDeploy: false
+    envVars: *env

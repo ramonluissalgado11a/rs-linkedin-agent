@@ -1,0 +1,57 @@
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: rs_agent_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 5s --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install
+        run: pip install -r requirements-dev.txt
+      - name: Lint
+        run: ruff check rs_agent tests
+      - name: Type check
+        run: mypy rs_agent
+      - name: Unit and integration tests (mocked LinkedIn/Claude)
+        run: pytest -q --cov=rs_agent --cov-report=term-missing --cov-fail-under=80
+      - name: Migrations on PostgreSQL
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/rs_agent_test
+        run: python -c "from rs_agent.db import Database; d=Database(__import__('os').environ['DATABASE_URL']); print(d.migrate()); print(d.migrate()); assert d.ping()"
+      - name: Security — static analysis
+        run: bandit -q -r rs_agent -ll
+      - name: Security — dependency audit
+        run: pip-audit -r requirements.txt
+      - name: Secret scan (no committed secrets)
+        run: |
+          ! git grep -nE "(sk-ant-[A-Za-z0-9_-]{20,}|AQ[A-Za-z0-9_-]{40,}|-----BEGIN (RSA|EC|OPENSSH) PRIVATE KEY-----)" -- . ':!tests/*'
+
+  docker:
+    needs: checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build image
+        run: docker build -t rs-linkedin-agent:${{ github.sha }} .
+      # Deployment is manual (render.yaml autoDeploy: false) and only after this workflow is green.
