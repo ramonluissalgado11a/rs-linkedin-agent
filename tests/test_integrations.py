@@ -143,6 +143,14 @@ class LinkedInTests(unittest.TestCase):
             TokenCipher("not-a-key")
         self.assertEqual(LinkedInClient(make_settings(LINKEDIN_CLIENT_ID=""), self.db).status()["status"], "DEGRADED")
 
+    def test_cipher_accepts_generated_random_secret(self):
+        # Render's generateValue yields standard base64 (may contain + and /), not a Fernet key.
+        secret = "k+Zq/8vR2mN1pQ7sT4uW6xY9aB3cD5eF0gH2jK4lM6n="
+        a, b = TokenCipher(secret), TokenCipher(secret)
+        self.assertEqual(b.decrypt(a.encrypt("AQtoken")), "AQtoken")
+        with self.assertRaises(AgentError):
+            TokenCipher("short+secret/value")
+
     def test_expired_token_status_blocked(self):
         self.li.save_tokens(TokenBundle("AQx", datetime.now(UTC) - timedelta(days=1), scopes=("w_member_social",)))
         self.assertEqual(self.li.status()["status"], "BLOCKED")

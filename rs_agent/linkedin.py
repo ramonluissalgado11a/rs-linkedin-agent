@@ -42,7 +42,15 @@ class TokenCipher:
         try:
             self._f = Fernet(key.encode())
         except (ValueError, TypeError) as exc:
-            raise AgentError("TOKEN_ENCRYPTION_KEY is not a valid Fernet key", ErrorCategory.VALIDATION) from exc
+            # Hosting dashboards (e.g. Render `generateValue`) produce random secrets that are not in
+            # Fernet's urlsafe format. Accept any high-entropy secret and derive a Fernet key from it.
+            if len(key) < 32:
+                raise AgentError("TOKEN_ENCRYPTION_KEY must be a Fernet key or a random secret of 32+ chars",
+                                 ErrorCategory.VALIDATION) from exc
+            import base64
+            import hashlib
+            derived = hashlib.sha256(b"rs-agent-token-key:" + key.encode()).digest()
+            self._f = Fernet(base64.urlsafe_b64encode(derived))
 
     def encrypt(self, value: str) -> str:
         return str(self._f.encrypt(value.encode()).decode())

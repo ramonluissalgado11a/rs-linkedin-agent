@@ -16,14 +16,14 @@ services:
         value: "true"
       - key: DATABASE_URL          # Supabase: Project Settings → Database → Connection string (URI, pooler)
         sync: false
-      - key: PUBLIC_BASE_URL
+      - key: PUBLIC_BASE_URL       # e.g. https://rs-agent-xxxx.onrender.com (after first deploy)
         sync: false
-      - key: ADMIN_TOKEN
-        sync: false
-      - key: SESSION_SECRET
-        sync: false
-      - key: TOKEN_ENCRYPTION_KEY
-        sync: false
+      - key: ADMIN_TOKEN             # Render generates a random value; view it in the dashboard
+        generateValue: true
+      - key: SESSION_SECRET             # Render generates a random value; view it in the dashboard
+        generateValue: true
+      - key: TOKEN_ENCRYPTION_KEY             # Render generates a random value; view it in the dashboard
+        generateValue: true
       - key: LINKEDIN_CLIENT_ID
         sync: false
       - key: LINKEDIN_CLIENT_SECRET

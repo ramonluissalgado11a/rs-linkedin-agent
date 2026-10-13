@@ -36,3 +36,11 @@ El plan gratis de Render no permite workers, duerme el servicio web tras 15 minu
 - usa tu **Supabase** como base de datos: en `DATABASE_URL` pega la cadena de conexión URI del pooler (Project Settings → Database);
 - al abrir el dashboard el servicio despierta (~1 minuto) y el worker procesa lo aprobado. Mientras duerme no publica nada, lo cual es aceptable porque cada post requiere tu aprobación.
 Blueprint: en Render, New → Blueprint y elige `render.free.yaml`.
+
+### Pasos exactos (plan gratis)
+1. Render → **New → Blueprint** → repo `rs-linkedin-agent`, rama `feature/claude-compliant-agent`, Blueprint path `render.free.yaml`.
+2. `ADMIN_TOKEN`, `SESSION_SECRET` y `TOKEN_ENCRYPTION_KEY` los genera Render solo (no los pegues en ningún chat). `ADMIN_TOKEN` lo ves en *Environment* y es tu clave para entrar al dashboard.
+3. `DATABASE_URL`: Supabase → Connect → *Transaction pooler* (URI), con tu contraseña de la base de datos.
+4. Tras el primer deploy copia la URL `https://…onrender.com` en `PUBLIC_BASE_URL` y `LINKEDIN_REDIRECT_URI` = esa URL + `/oauth/linkedin/callback`.
+5. LinkedIn Developers: misma Redirect URL; `LINKEDIN_CLIENT_ID` y `LINKEDIN_CLIENT_SECRET` se pegan solo en Render.
+6. `ANTHROPIC_API_KEY` es opcional (sin ella el agente funciona en modo DEGRADED: cola de aprobación y publicación manual de borradores).
