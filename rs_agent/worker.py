@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import logging
 import signal
+import threading
 import time
 from typing import Any
 
@@ -43,7 +44,9 @@ def build_runner(ctx: AppContext) -> JobRunner:
     )
 
 
-def run_forever(ctx: AppContext | None = None, max_iterations: int | None = None) -> None:
+def run_forever(ctx: AppContext | None = None, max_iterations: int | None = None,
+                stop_event: threading.Event | None = None, install_signals: bool = True) -> None:
+    """Run the job loop. In-process mode (free hosting) passes a stop_event and install_signals=False."""
     ctx = ctx or build_context()
     runner = build_runner(ctx)
     stopping = {"flag": False}
@@ -51,15 +54,16 @@ def run_forever(ctx: AppContext | None = None, max_iterations: int | None = None
     def _stop(*_: Any) -> None:
         stopping["flag"] = True
 
-    signal.signal(signal.SIGTERM, _stop)
-    signal.signal(signal.SIGINT, _stop)
+    if install_signals:
+        signal.signal(signal.SIGTERM, _stop)
+        signal.signal(signal.SIGINT, _stop)
     run_id = start_run(ctx.db, "worker")
     run_id_var.set(run_id)
     log(_logger, logging.INFO, "worker started")
     processed = 0
     iterations = 0
     try:
-        while not stopping["flag"]:
+        while not stopping["flag"] and not (stop_event and stop_event.is_set()):
             iterations += 1
             try:
                 status = runner.run_once()
@@ -77,6 +81,15 @@ def run_forever(ctx: AppContext | None = None, max_iterations: int | None = None
         runner.shutdown()
         finish_run(ctx.db, run_id, "stopped", {"processed": processed})
         log(_logger, logging.INFO, "worker stopped", processed=processed)
+
+
+def start_in_process(ctx: AppContext) -> tuple[threading.Thread, threading.Event]:
+    """Run the worker as a daemon thread inside the web process (for hosts without worker services)."""
+    stop = threading.Event()
+    thread = threading.Thread(target=run_forever, kwargs={"ctx": ctx, "stop_event": stop, "install_signals": False},
+                              name="rs-agent-worker", daemon=True)
+    thread.start()
+    return thread, stop
 
 
 def main() -> None:  # pragma: no cover - process entrypoint

@@ -1,0 +1,42 @@
+# Render Blueprint for the FREE plan.
+# Free plan limits (render.com/docs/free): no background workers, web services sleep after 15 min idle,
+# free Render Postgres expires after 30 days. So: one web service runs the worker in-process, and the
+# database is your existing Supabase Postgres (set DATABASE_URL to its connection string in the dashboard).
+services:
+  - type: web
+    name: rs-agent
+    runtime: docker
+    plan: free
+    healthCheckPath: /ready
+    autoDeploy: false
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: RUN_WORKER_IN_WEB
+        value: "true"
+      - key: DATABASE_URL          # Supabase: Project Settings → Database → Connection string (URI, pooler)
+        sync: false
+      - key: PUBLIC_BASE_URL
+        sync: false
+      - key: ADMIN_TOKEN
+        sync: false
+      - key: SESSION_SECRET
+        sync: false
+      - key: TOKEN_ENCRYPTION_KEY
+        sync: false
+      - key: LINKEDIN_CLIENT_ID
+        sync: false
+      - key: LINKEDIN_CLIENT_SECRET
+        sync: false
+      - key: LINKEDIN_REDIRECT_URI
+        sync: false
+      - key: LINKEDIN_API_VERSION
+        value: "202605"
+      - key: LINKEDIN_AUTO_PUBLISH
+        value: "false"
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: DAILY_BUDGET_USD
+        value: "2.00"
+      - key: MONTHLY_BUDGET_USD
+        value: "40.00"

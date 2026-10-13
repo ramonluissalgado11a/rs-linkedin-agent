@@ -157,3 +157,28 @@ class WorkerTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class InProcessWorkerTests(unittest.TestCase):
+    def test_in_process_worker_runs_and_stops_without_signals(self):
+        import time as _t
+
+        from rs_agent.worker import start_in_process
+        ctx = make_ctx()
+        http = FakeSession()
+        ctx.linkedin.http = http
+        grant(ctx.db, "w_member_social")
+        ctx.linkedin.save_tokens(TokenBundle("AQtok", datetime.now(UTC) + timedelta(days=30),
+                                             scopes=("w_member_social",), member_urn="urn:li:person:me"))
+        r = approvals.propose(ctx.db, ctx.settings, ProposedAction("CREATE_POST", "self", "content:ip", "Post", POST))
+        approvals.decide(ctx.db, ctx.settings, r.queue_id, "approve", "t")
+        http.add("POST", POSTS_URL, FakeResponse(201, None, {"x-restli-id": "urn:li:share:ip"}))
+        thread, stop = start_in_process(ctx)
+        for _ in range(50):
+            if ctx.db.scalar("SELECT status FROM actions WHERE id = ?", (r.action_id,)) == "executed":
+                break
+            _t.sleep(0.05)
+        stop.set()
+        thread.join(timeout=5)
+        self.assertFalse(thread.is_alive())
+        self.assertEqual(ctx.db.scalar("SELECT status FROM actions WHERE id = ?", (r.action_id,)), "executed")

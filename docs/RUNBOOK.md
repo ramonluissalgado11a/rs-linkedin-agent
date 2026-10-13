@@ -29,3 +29,10 @@
 
 ## Revisión trimestral
 Verificar la versión vigente de la API de LinkedIn y los precios por token de Claude; actualizar variables sin tocar código.
+
+## Despliegue GRATIS en Render (`render.free.yaml`)
+El plan gratis de Render no permite workers, duerme el servicio web tras 15 minutos sin tráfico y borra la base de datos gratis a los 30 días. Por eso esta variante:
+- usa **un solo servicio web** con `RUN_WORKER_IN_WEB=true` (el worker corre dentro del web);
+- usa tu **Supabase** como base de datos: en `DATABASE_URL` pega la cadena de conexión URI del pooler (Project Settings → Database);
+- al abrir el dashboard el servicio despierta (~1 minuto) y el worker procesa lo aprobado. Mientras duerme no publica nada, lo cual es aceptable porque cada post requiere tu aprobación.
+Blueprint: en Render, New → Blueprint y elige `render.free.yaml`.
